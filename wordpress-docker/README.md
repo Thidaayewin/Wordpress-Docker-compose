@@ -52,6 +52,8 @@ How Docker Compose Works Internally!
 -----------------------------------
 
 docker compose up -d
+
+
    ↓
 Create Docker Network
  Docker automatically sets up a default network so containers can talk to each other.
@@ -60,23 +62,23 @@ Create Docker Network
    ↓
 Start db (MySQL)
 Pulls the mysql:8.0 image, builds the container, initializes database files,
-     creates the 'wordpress' database, and sets up a user/password.
+creates the 'wordpress' database, and sets up a user/password.
 
 
    ↓
 Start wordpress (App)
 Pulls the wordpress:latest image, builds the container, connects to MySQL on port 3306,
-     verifies credentials, and installs WordPress tables.
+verifies credentials, and installs WordPress tables.
 
    ↓
 Start phpMyAdmin (UI)
 Pulls the phpmyadmin:latest image, builds the container, connects to the same database,
-     and exposes the admin panel at localhost:8081.
+and exposes the admin panel at localhost:8081.
 
-     
+
    ↓
 Running State
-   → WordPress available at localhost:8080
-   → phpMyAdmin available at localhost:8081
-   → MySQL running internally on the Docker network
+WordPress available at localhost:8080
+phpMyAdmin available at localhost:8081
+MySQL running internally on the Docker network
 
