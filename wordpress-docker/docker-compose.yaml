@@ -1,0 +1,46 @@
+services:
+  db:
+    image: mysql:8.0  
+    container_name: mysql_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: picoadmin
+      MYSQL_PASSWORD: picoadmin
+    volumes:
+      - db_data:/var/lib/mysql
+
+  wordpress:
+    image: wordpress:latest
+    container_name: wordpress_app
+    restart: always
+    ports:
+      - "8080:80"
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: picoadmin
+      WORDPRESS_DB_PASSWORD: picoadmin
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - wordpress_data:/var/www/html
+      - ./my-theme:/var/www/html/wp-content/themes/my-theme
+    depends_on:
+      - db
+      #ensure db start before wordpress
+
+  phpmyadmin:
+    image: phpmyadmin:latest 
+    container_name: phpmyadmin_ui
+    restart: always
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: db
+      MYSQL_ROOT_PASSWORD: rootpass
+    depends_on:
+      - db
+
+volumes:
+  db_data:
+  wordpress_data:
