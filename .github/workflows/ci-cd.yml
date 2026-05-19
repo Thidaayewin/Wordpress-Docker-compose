@@ -1,0 +1,84 @@
+name: WordPress Docker CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: Validate and Smoke Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate Docker Compose file
+        run: docker compose -f docker-compose.yaml config
+
+      - name: Lint theme PHP files
+        run: |
+          find my-theme -name "*.php" -print0 | xargs -0 -n1 php -l
+
+      - name: Start stack
+        run: docker compose -f docker-compose.yaml up -d
+
+      - name: Wait for WordPress
+        run: |
+          for attempt in {1..30}; do
+            if curl --fail --silent --show-error http://localhost:8080 > /dev/null; then
+              exit 0
+            fi
+
+            echo "Waiting for WordPress to respond... attempt ${attempt}/30"
+            sleep 5
+          done
+
+          docker compose -f docker-compose.yaml logs
+          exit 1
+
+      - name: Stop stack
+        if: always()
+        run: docker compose -f docker-compose.yaml down -v
+
+  deploy:
+    name: Deploy to Server
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    env:
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_USER: ${{ secrets.SSH_USER }}
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      SSH_PORT: ${{ secrets.SSH_PORT }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+
+    steps:
+      - name: Deploy over SSH
+        if: env.SSH_HOST != '' && env.SSH_USER != '' && env.SSH_PRIVATE_KEY != '' && env.DEPLOY_PATH != ''
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ env.SSH_HOST }}
+          username: ${{ env.SSH_USER }}
+          key: ${{ env.SSH_PRIVATE_KEY }}
+          port: ${{ env.SSH_PORT != '' && env.SSH_PORT || '22' }}
+          script: |
+            set -e
+
+            cd "${{ env.DEPLOY_PATH }}"
+            git pull origin "${{ github.ref_name }}"
+            docker compose -f docker-compose.yaml pull
+            docker compose -f docker-compose.yaml up -d
+            docker image prune -f
+
+      - name: Skip deploy when secrets are missing
+        if: env.SSH_HOST == '' || env.SSH_USER == '' || env.SSH_PRIVATE_KEY == '' || env.DEPLOY_PATH == ''
+        run: |
+          echo "Deployment skipped because SSH_HOST, SSH_USER, SSH_PRIVATE_KEY, or DEPLOY_PATH is not configured."
