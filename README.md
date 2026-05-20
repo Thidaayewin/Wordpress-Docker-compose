@@ -47,5 +47,8 @@ Select My Hello World Theme
 
 The site will display: Hello to Pico SBS
 
+Docker Image link 
+-----------------
+docker pull thidaayewin/wordpress-docker-compose:c87a3c99d187a41d7709b83cb399110f90953cc7
 
 
